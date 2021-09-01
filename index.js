@@ -8,7 +8,7 @@ const { UdpReceiver, UdpSender } = require("omgosc");
 
 // helpers
 
-const isGoodPort = port => {
+const isGoodPort = (port) => {
   if (typeof port === "string") {
     port = parseInt(port);
 
@@ -20,7 +20,7 @@ const isGoodPort = port => {
   return port > 0 && port < 65536;
 };
 
-const packNybbles = data => {
+const packNybbles = (data) => {
   const out = [];
 
   for (let i = 0; i < data.length; i += 2) {
@@ -53,7 +53,7 @@ if (!program.args.length) {
 // logging
 
 const log = program.debug ? console.log : () => {};
-const stringify = json => JSON.stringify(json, null, 2);
+const stringify = (json) => JSON.stringify(json, null, 2);
 
 // osc connections
 
@@ -63,48 +63,51 @@ const connections = {};
 
 const BAUD_RATE = program.baud ? parseInt(program.baud) : 115200;
 const MASTER_RECEIVER_PORT = program.osc ? parseInt(program.osc) : 12002;
-const DEVICE = "monome";
+const DEVICE = "m0000000";
 const DEFAULT_PREFIX = `/${DEVICE}`;
 
 let sysId = "monome";
 let size = program.size
-  ? program.size.split("x").map(n => parseInt(n))
+  ? program.size.split("x").map((n) => parseInt(n))
   : undefined;
 
 const OSC_TO_HARDWARE = {
-  "/grid/led/set": params => [
+  "/grid/led/set": (params) => [
     params[2] === 0 ? 0x10 : 0x11,
     params[0],
-    params[1]
+    params[1],
   ],
-  "/grid/led/all": params => [params[0] === 0 ? 0x12 : 0x13],
-  "/grid/led/map": params => [0x14, ...params],
-  "/grid/led/row": params => [0x15, ...params],
-  "/grid/led/col": params => [0x16, ...params],
-  "/grid/led/intensity": params => [0x17, ...params],
-  "/grid/led/level/set": params => [0x18, ...params],
-  "/grid/led/level/all": params => [0x19, ...params],
-  "/grid/led/level/map": params => [
+  "/grid/led/all": (params) => [params[0] === 0 ? 0x12 : 0x13],
+  "/grid/led/map": (params) => [0x14, ...params],
+  "/grid/led/row": (params) => [0x15, ...params],
+  "/grid/led/col": (params) => [0x16, ...params],
+  "/grid/led/intensity": (params) => [0x17, ...params],
+  "/grid/led/level/set": (params) => [0x18, ...params],
+  "/grid/led/level/all": (params) => [0x19, ...params],
+  "/grid/led/level/map": (params) => [
     0x1a,
     params[0],
     params[1],
-    ...packNybbles(params.slice(2))
+    ...packNybbles(params.slice(2)),
+    // ...params,
   ],
-  "/grid/led/level/row": params => [
+  "/grid/led/level/row": (params) => [
     0x1b,
-    params[0],
-    params[1],
-    ...packNybbles(params.slice(2))
+    // params[0],
+    // params[1],
+    // ...packNybbles(params.slice(2)),
+    ...params,
   ],
-  "/grid/led/level/col": params => [
+  "/grid/led/level/col": (params) => [
     0x1c,
-    params[0],
-    params[1],
-    ...packNybbles(params.slice(2))
-  ]
+    // params[0],
+    // params[1],
+    // ...packNybbles(params.slice(2)),
+    ...params,
+  ],
 };
 
-const createKeyMessageHandler = type => msg => {
+const createKeyMessageHandler = (type) => (msg) => {
   if (msg.length < 6) {
     return;
   }
@@ -117,7 +120,7 @@ const createKeyMessageHandler = type => msg => {
   log();
 
   // notify all conections
-  Object.keys(connections).forEach(key => {
+  Object.keys(connections).forEach((key) => {
     const { deviceSender, prefix } = connections[key];
     deviceSender.send(`${prefix}/grid/key`, "iii", [x, y, type]);
   });
@@ -131,7 +134,7 @@ const HARDWARE_MESSAGE_HANDLERS = {
     log(sysId);
     log();
   },
-  "0x03": msg => {
+  "0x03": (msg) => {
     if (!size) {
       const x = parseInt(msg.substring(2, 4), 16);
       const y = parseInt(msg.substring(4, 6), 16);
@@ -144,22 +147,22 @@ const HARDWARE_MESSAGE_HANDLERS = {
     log();
   },
   "0x20": createKeyMessageHandler(0),
-  "0x21": createKeyMessageHandler(1)
+  "0x21": createKeyMessageHandler(1),
 };
 
 const INIT_MESSAGES = [
   [0x01], // sysId
-  [0x05] // size
+  [0x05], // size
 ];
 
 // serial
 
 const ttyFile = program.args[0];
 
-if (!fs.existsSync(ttyFile)) {
-  console.log(`${ttyFile} doesn't exist`);
-  process.exit(1);
-}
+// if (!fs.existsSync(ttyFile)) {
+//   console.log(`${ttyFile} doesn't exist`);
+//   process.exit(1);
+// }
 
 console.log(`opening ${ttyFile}...`);
 const port = new SerialPort(ttyFile, { baudRate: BAUD_RATE });
@@ -202,16 +205,17 @@ const createConnection = (
     receiver,
     sysOscPort,
     deviceOscHost,
-    deviceOscPort
+    deviceOscPort,
   };
   const connection = connections[oscAddress];
 
   // notify listener about our device
   // TODO: use sysId here?
+
   sysSender.send("/serialosc/device", "ssi", [DEVICE, DEVICE, sysOscPort]);
 
   // listen to sys messages
-  receiver.on("", e => {
+  receiver.on("", (e) => {
     log(">>> receiver");
     log(stringify(e));
     log();
@@ -268,7 +272,7 @@ const createConnection = (
         ["/sys/host", "s", [connection.deviceOscHost]],
         ["/sys/port", "i", [connection.deviceOscPort]],
         ["/sys/prefix", "s", [connection.prefix]],
-        ["/sys/rotation", "i", [0]]
+        ["/sys/rotation", "i", [0]],
       ];
 
       sysMessages.forEach(([path, typetag, params]) => {
@@ -284,8 +288,10 @@ const createConnection = (
 
     if (OSC_TO_HARDWARE[pathWithoutPrefix]) {
       const buffer = Buffer.from(OSC_TO_HARDWARE[pathWithoutPrefix](e.params));
+      log(buffer);
+      log(buffer.length);
 
-      port.write(buffer, e => {
+      port.write(buffer, (e) => {
         if (e) {
           console.error(e);
         }
@@ -300,23 +306,24 @@ const createConnection = (
 
 if (program.apposc) {
   const oscPort = parseInt(program.apposc);
+  log("oscport %d", oscPort)
   createConnection("127.0.0.1", oscPort, oscPort);
 }
 
-port.on("open", err => {
+port.on("open", (err) => {
   if (err) throw err;
 
-  console.log("ready!");
+  log("ready!");
 
-  INIT_MESSAGES.forEach(msg =>
-    port.write(Buffer.from(msg), e => {
+  INIT_MESSAGES.forEach((msg) =>
+    port.write(Buffer.from(msg), (e) => {
       if (e) {
         console.error(e);
       }
     })
   );
 
-  masterReceiver.on("", e => {
+  masterReceiver.on("", (e) => {
     log(">>> master");
     log(stringify(e));
     log();
@@ -343,7 +350,7 @@ port.on("open", err => {
 
 // handle events from monome
 
-port.on("data", data => {
+port.on("data", (data) => {
   const hex = data.toString("hex");
 
   const msgType = `0x${hex.substring(0, 2)}`;

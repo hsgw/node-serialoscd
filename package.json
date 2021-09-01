@@ -2,7 +2,7 @@
   "dependencies": {
     "commander": "^2.20.0",
     "omgosc": "^1.0.0",
-    "serialport": "^7.1.5",
+    "serialport": "^9.2.0",
     "udp-free-port": "^1.0.0"
   },
   "preferGlobal": true,
