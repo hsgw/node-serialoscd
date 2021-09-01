@@ -43,6 +43,7 @@ program
     "-s, --size <16x8>",
     "specify Monome size (requests from device by default)"
   )
+  .option("-p --prefix <devicename>", "specify prefix/device name (defaults to monome)")
   .parse(process.argv);
 
 if (!program.args.length) {
@@ -63,7 +64,7 @@ const connections = {};
 
 const BAUD_RATE = program.baud ? parseInt(program.baud) : 115200;
 const MASTER_RECEIVER_PORT = program.osc ? parseInt(program.osc) : 12002;
-const DEVICE = "monome";
+const DEVICE = program.prefix ? program.prefix : "monome";
 const DEFAULT_PREFIX = `/${DEVICE}`;
 
 let sysId = "monome";
@@ -156,9 +157,11 @@ const INIT_MESSAGES = [
 
 const ttyFile = program.args[0];
 
-if (!fs.existsSync(ttyFile)) {
-  console.log(`${ttyFile} doesn't exist`);
-  process.exit(1);
+if (process.platform!=='win32') {
+  if (!fs.existsSync(ttyFile)) {
+    console.log(`${ttyFile} doesn't exist`);
+    process.exit(1);
+  }
 }
 
 console.log(`opening ${ttyFile}...`);
